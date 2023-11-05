@@ -1,0 +1,29 @@
+---
+title: "Tarea 2"
+subtitle: "EYP3907 - Series de Tiempo"
+format: 
+  pdf: 
+    include-in-header: 
+      text: |
+        \usepackage{amsmath}
+    colorlinks: true
+    geometry:
+      - top=20mm
+      - left=20mm
+      - right=20mm
+      - heightrounded
+    fig-pos: H
+    classoption: twocolumn
+author: 
+  - name: "Sebastián Celaya"
+  - name: "Camila Echeverría"
+  - name: "Francisca Vilca"
+crossref:
+  fig-title: Figura
+  fig-prefix: Figura
+  tbl-title: Tabla
+  tbl-prefix: Tabla
+tbl-cap-location: bottom
+---
+
+## Cadena de oración pa que la Jo se apiade de nosotros
