@@ -5,6 +5,7 @@ library(forecast)
 library(tidyverse)
 library(dplyr)
 library(tseries)
+library(patchwork)
 
 ## Funciones 
 source("TS.diag.R")
@@ -65,9 +66,6 @@ box_plot = datos %>%
 box_plot
 
 # ACF y PACF ----
-
-acf(datos$X540021_raw, main = "ACF")
-pacf(datos$X540021_raw, main = "PACF")
 
 # ACF base
 acf <- acf(Xt, plot = FALSE)
@@ -143,8 +141,8 @@ PACF = pacf_data %>%
         axis.text.x = element_text(size = 8))
 
 
-PACF
-ACF
+ACF / 
+  PACF
 
 # ARIMA ----
 
@@ -163,10 +161,59 @@ salida.arima(Xt, fit) # significancia de los coeficientes
 
 adf.test(fit$res) # SON ESTACIONARIOS
 
-acf(Xt) 
-pacf(Xt)
+plot(fit) # Valor dentro del circulito
+all(abs(coef(fit)) < 1) # Es invertible :D
 
-Xt_new <- fitted(fit)
+# Predicciones ----
+source("Durbin_Levinson.R")
 
+# Durbin Levinson
+fitted.durbinlevinson <- DurbinLevinson(Xt-mean(Xt), ma = fit$coef[1],
+                                        ar = 0)$fitted
+
+forecast::forecast(fitted.durbinlevinson, h = 1)$mean + mean(Xt)
+
+# ACF empírico vs estimado
+library(nleqslv) 
+acfs = acf(Xt, plot = FALSE)$acf[2]
+modMA = nleqslv(x = 1.2, fn = MA_cf_0, acfs = acfs)
+
+modMA$x # Estimacion
+
+
+
+
+
+
+
+
+
+
+
+
+dl.loglik = function(x, serie, p = 1, q = 1){
+  ar = NULL
+  ma = NULL 
+  if(p > 0){
+    ar  = x[1:p]
+  }
+  if(q > 0){
+    ma  = x[(p+1):(p+q)]
+  }
+  fit   = DurbinLevinson(serie = serie, ar = ar, ma = ma)
+  e     = serie-fit$fitted
+  nu    = fit$nu 
+  aux = 0.5*(sum(log(fit$nu)) +  sum(e^2/fit$nu))
+  if(is.nan(aux)){aux = Inf}
+  aux
+}
+
+fit2 <- nlminb(start = c(-0.7261042),
+               objective = dl.loglik,
+               serie = Xt,
+               p = 0, q = 1, 
+               lower = c(-0.99999),
+               upper = c(+0.99999))
+fit2$fitted
 
 
