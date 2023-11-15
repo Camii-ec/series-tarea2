@@ -144,11 +144,23 @@ PACF = pacf_data %>%
 ACF / 
   PACF
 
+# Revisar tendencias ----
+
+per <- LSTS::periodogram(Xt)
+plot(per$periodogram ~ per$lambda, type = "l", lwd = 2)
+
+which(per$periodogram  == max(per$periodogram))
+
+2*pi/per$lambda[1] # Periodo d=169, que es el total de datos
+# No necesitamos diferenciar (?)
+abline(v = 2*pi/169, col = "red")
+
+
 # ARIMA ----
 
-auto.arima(Xt)
+auto.arima(Xt, d = 0)
 ## AR(1)
-fit <- forecast::Arima(Xt, order = c(0,1,1), include.mean = F)
+fit <- forecast::Arima(Xt, order = c(0,0,1), include.mean = F)
 
 
 # Tests ----
@@ -168,7 +180,7 @@ all(abs(coef(fit)) < 1) # Es invertible :D
 source("Durbin_Levinson.R")
 
 # Durbin Levinson
-fitted.durbinlevinson <- DurbinLevinson(Xt-mean(Xt), ma = fit$coef[1],
+fitted.durbinlevinson <- DurbinLevinson(Xt, ma = fit$coef[1],
                                         ar = 0)$fitted
 
 forecast::forecast(fitted.durbinlevinson, h = 1)$mean + mean(Xt)
@@ -179,7 +191,6 @@ acfs = acf(Xt, plot = FALSE)$acf[2]
 modMA = nleqslv(x = 1.2, fn = MA_cf_0, acfs = acfs)
 
 modMA$x # Estimacion
-
 
 
 
