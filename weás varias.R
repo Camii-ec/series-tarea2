@@ -102,27 +102,94 @@ forecast::forecast(fitted.durbinlevinson, h = 1)$upper + mean(Xt)
 # ACF ---------------------------------------------------------------------
 
 acf_teo <- ARMAacf(ar = fit$coef[1], ma = fit$coef[2], lag.max = 22)
-
+IC_sup <- acf_teo - 1.96 / sqrt(length(Xt))
+IC_inf <- acf_teo + 1.96 / sqrt(length(Xt))
+IC = data.frame(IC_sup = IC_sup, IC_inf = IC_inf, Lag = 1:length(IC_sup))
 # Gráfico piñufla del acf estimado vs empírico
+
+data.frame(ACF = acf_teo, Lag = 1:length(acf_teo)) %>%
+  ggplot(aes(x = Lag,
+             y = ACF)) +
+  geom_point() +
+  geom_segment(aes(x = Lag, xend = Lag,
+                   y = ACF, yend = 0)) +
+  geom_hline(yintercept = 1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  # geom_line(data = IC, aes(x = ))
+  labs(y = "ACF teórico", 
+       x = "Lag")
+
+aux <- acf(Xt, plot = FALSE)
+
+data.frame(ACF = aux$acf, Lag = aux$lag) %>%
+  ggplot(aes(x = Lag,
+             y = ACF)) +
+  geom_point() +
+  geom_segment(aes(x = Lag, xend = Lag,
+                   y = ACF, yend = 0)) +
+  labs(y = "ACF empírico", 
+       x = "Lag")
+
+
+#### Bandas de confianza:
+# rho \in (rho(h) +- z*sqrt(w/n))
+Bartlett = function(ma = NULL, ar = NULL, m = 3000, lag.max = 10){
+  rho = ARMAacf(ma = ma, ar = ar, lag.max = lag.max+m)
+  j = 1:m
+  w = c()
+  for(h in 1:lag.max){
+    w[h] = sum((rho[abs(h+j)+1]+rho[abs(h-j)+1]-2*rho[h+1]*rho[j+1])^2)
+  }
+  w
+}
+n <- length(Xt)
+w <- Bartlett(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22)
+
+# Banda de confianza para el acf empirico
+rhoh <- acf(Xt, lag.max = 22)$acf[2:23]
+
+IC_inf <- rhoh - qnorm(1 - 0.05/2)*sqrt(w/n)
+IC_sup <- rhoh + qnorm(1 - 0.05/2)*sqrt(w/n)
+
+acf(Xt, lag.max = 22)
+lines(ARMAacf(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22) ~ c(0:22), col = "red", type = "b", pch = 20)
+lines(IC_inf ~ c(1:22), col = "blue", type = "l")
+lines(IC_sup ~ c(1:22), col = "blue", type = "l")
+
+
+
+
+
 par(mfrow=c(1,2))
 plot(acf_teo, type = "h")
 abline(a = 1.96/sqrt(169), b = 0)
+# IC superior
+lines(acf(Xt, plot = FALSE)$lag + 1,
+      y = IC_inf, col = "blue", lty = 2)
+lines(acf(Xt, plot = FALSE)$lag + 1,
+      IC_sup, col = "blue", lty = 2)
 acf(Xt)
 # Creo que hay weás raras aquí, cuidao
 
-## FALTAN LOS INTERVALOS DE CONFIANZA PARA ACF TEÓRICO
+## FALTAN LOS INTERVALOS DE CONFIANZA PARA ACF TEÓRICO   -> No sé si está bueno
 
 
 # Densidad espectral ------------------------------------------------------
 
-par(mfrow=c(1,2))
-spec <- LSTS::spectral.density(ar = fit$coef[1], ma = fit$coef[2], 
+
+spec <- LSTS::spectral.density(ar = fit$coef[1], ma = fit$coef[2],
                                sd = sqrt(fit$sigma2))
+
+#  IC_sup <- spec + 1.96 / sqrt(length(spec))
+#  IC_inf <- spec - 1.96 / sqrt(length(spec))
+par(mfrow=c(1,2))
 plot(spec, type = "l")
+# lines(IC_sup, type = "l", col = "red", lty = 2)
+# lines(IC_inf, type = "l", col = "red", lty = 2)
 plot(per$periodogram, type = "l")
 
-# FALTAN LAS BANDAS DE CONFIANZA x2
-
+# FALTAN LAS BANDAS DE CONFIANZA x2    <-    en el enunciado no lo dice :V
+ 
 
 # Whittle -----------------------------------------------------------------
 
