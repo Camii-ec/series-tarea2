@@ -223,8 +223,8 @@ fit_whittle <- LS.whittle(
 
 library(LSTS)
 LSTS::LS.whittle(series = Xt,
-                 start = c(ar = 1, ma = 1), 
-                 ar.order = 1, ma.order = 1)
+                 start = c(ar = 1, ma = 1, sigma=1), 
+                 order = c(1,1))
 
 summary(fit)
 summary(forecast::Arima(Xt, order = c(1, 0, 1), method = "ML")) # Es mejor

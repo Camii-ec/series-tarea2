@@ -180,8 +180,7 @@ all(abs(coef(fit)) < 1) # Es invertible :D
 source("Durbin_Levinson.R")
 
 # Durbin Levinson
-fitted.durbinlevinson <- DurbinLevinson(Xt, ma = fit$coef[1],
-                                        ar = 0)$fitted
+fitted.durbinlevinson <- DurbinLevinson(Xt,ar = fit$coef[1],ma = fit$coef[2],)$fitted
 
 forecast::forecast(fitted.durbinlevinson, h = 1)$mean + mean(Xt)
 
@@ -196,8 +195,10 @@ modMA$x # Estimacion
 
 
 
-
-
+plot(Xt , type="l", col = "blue")
+points(y=fitted.durbinlevinson + mean(Xt),x=c(1721:1889) ,type = "l")
+points(fit$fitted, type = "l", col = "red")
+points(fitted_whittle.auto.arima + mean(Xt), col = "pink")
 
 
 
