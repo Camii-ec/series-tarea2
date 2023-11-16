@@ -213,7 +213,7 @@ fit <- forecast::Arima(Xt, order = c(0,0,1), include.mean = F)
 ```
 
 
-### Significancia estadística de los coeficientes del modelo
+### a) Significancia estadística de los coeficientes del modelo
 
 Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente significantes, por lo que al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la tabla 1:
 
@@ -222,33 +222,55 @@ Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente 
 ```
 
 
-### Estacionaridad e invertibilidad del modelo ARMA 
+### b) Estacionaridad e invertibilidad del modelo ARMA 
 
-Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que al ser menor al $5\%$ de significancia se rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la @fig-exp5:
+Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que al ser menor al $5\%$ de significancia se rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la @fig-exp5 :
 
 ```{r}
 
 #| label: fig-exp5
 #| fig-cap: "Gráfico de raíces unitarias"
 #| fig-asp: 0.5
-
+dev.off()
 autoplot(fit) +
-  labs(x = "",
-       y = "") +
-  theme_bw() +
-  theme(axis.text.y = element_text(size = 8),
-        # axis.ticks.y = element_blank(),
-        axis.title.y = element_text(size = 8),
-        plot.title = element_text(size = 10,
-                                  #face = "bold",
-                                  color = "black",
-                                  hjust = 0.5),
-        axis.title.x = element_text(size = 8),
-        axis.text.x = element_text(size = 8),
-        legend.position = "bottom")
+  theme_minimal() +
+  labs(x = "", y = "") +
+  theme(
+    text = element_text(size = 10),
+    axis.text.y = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    axis.text.x = element_text(size = 8, angle = 90, vjust = 0.5, hjust=1),
+    legend.position = "none"
+  )
 ```
 
 
-### Test de blancura - homocedasticidad y normalidad de los residuos
+### c) Test de blancura - homocedasticidad y normalidad de los residuos
 
-### ¿Es necesario realizar una transformación de Box-Cox?
+Sabemos que los residuos del modelo, es decir, lo que no es capaz de explicar el modelo ARMA(1,1), debe cumplir con ser normales, tener varianza constante e idealmente provenir de un ruido blanco. Para ello veremos diferentes test que se le pueden aplicar para comprobar ello:
+
+- Usando el estadístico de Ljung-Box es
+
+```{r fig.width = 10, fig.height = 4}
+
+#| label: fig-exp4
+#| fig-cap: "Gráfico de valores-p para el estadístico Ljung-Box"
+#| fig-asp: 0.5
+
+# dev.off()
+# Box.Ljung.Test(fit$residuals, main = "", col = "brown")
+
+ljung_box_test <- Box.test(fit$residuals, lag = 10, type = "Ljung-Box")
+
+lb <- data.frame(Lag = 1:10, Pvalue = ljung_box_test$p.value)
+
+ggplot(lb, aes(x = Lag, y = Pvalue)) +
+  geom_point(shape = 8, size = 2,stat = "identity", col = "brown") +
+  geom_hline(yintercept = 0.05,lwd =0.8, linetype = "dashed", color = "darkgreen") +
+  labs(x = "Lag",
+       y = "valor-p") +
+  theme_minimal()
+```
+
+### d) ¿Es necesario realizar una transformación de Box-Cox?
