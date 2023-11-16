@@ -126,4 +126,50 @@ plot(per$periodogram, type = "l")
 
 # Whittle -----------------------------------------------------------------
 
-LSTS::LS.whittle(series = Xt, start = c(fit$coef[1], fit$coef[2]), order = c(p = 1, q = 1))
+N <- 169
+S <- 100
+M <- trunc((length(Xt) - N) / S + 1)
+table <- c()
+for (j in 1:M) {
+  x <- Xt[(1 + S * (j - 1)):(N + S * (j - 1))]
+  table <- rbind(table, nlminb(
+    start = c(0, 0), N = N,
+    objective = LS.whittle.loglik,
+    series = x, order = c(p = 1, q = 1)
+  )$par)
+}
+u <- (N / 2 + S * (1:M - 1)) / length(malleco)
+table <- as.data.frame(cbind(u, table))
+colnames(table) <- c("u", "phi", "sigma")
+# Start parameters
+phi <- smooth.spline(table$phi,
+                     spar = 1,
+                     tol = 0.01)$y
+fit.1 <- nls(phi ~ a0 + a1 * u, start = list(a0 = 0.65, a1 = 0.00))
+sigma <- smooth.spline(table$sigma, spar = 1)$y
+fit.2 <- nls(sigma ~ b0 + b1 * u, start = list(b0 = 0.65, b1 = 0.00))
+fit_whittle <- LS.whittle(
+  series = malleco, start = c(coef(fit.1), coef(fit.2)), order = c(p = 1, q = 0),
+  ar.order = 1, sd.order = 1, N = 180, n.ahead = 10
+)
+
+
+library(LSTS)
+LSTS::LS.whittle(series = Xt,
+                 start = c(ar = 1, ma = 1), 
+                 ar.order = 1, ma.order = 1)
+
+summary(fit)
+summary(forecast::Arima(Xt, order = c(1, 0, 1), method = "ML")) # Es mejor
+
+# El de whittle gana 4  -  3 al ARMA solito
+?forecast::Arima
+
+
+
+
+nlminb(
+  start = c(fit$coef[1], abs(fit$coef[2])), N = N,
+  objective = LS.whittle.loglik,
+  series = x, order = c(p = 1, q = 1)
+)

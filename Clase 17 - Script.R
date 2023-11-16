@@ -64,8 +64,10 @@ whittle.loglik = function(x, serie, p = 1, q = 1){
   aux = 0.5*(sum(log(f)) + sum(I/f))/n
   aux
 }
-
-nlminb(start = c(0.5, 1), objective = whittle.loglik, serie = X, p = 1, q = 0)$par
+coef(fit)
+nlminb(start = c(fit$coef[1], fit$coef[2]),
+       objective = whittle.loglik, 
+       serie = Xt, p = 1, q = 1)$par
 
 
 ############################
