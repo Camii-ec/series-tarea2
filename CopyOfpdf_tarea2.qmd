@@ -373,16 +373,44 @@ Finalmente, una forma bastante sencilla de comparar los modelos es mediante medi
 \centering
 \begin{tabular}{| c | c | c | c | c | c | c | c |}
 \hline
- & ME & RMSE & MAE & MPE & MAPE & MASE \\
+     & ME & RMSE & MAE & MPE & MAPE & MASE \\
 \hline
-ARMA & 0.15 & 0.12 & 16.35 & MPE & MAPE & MASE\\
+ARMA & -0.001 & 0.09 & 0.08 & -2.14 & 11.90 & 0.81\\
 \hline
-D-L & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+D-L & -0.0009 & 0.09 & 0.08 & -2.17 & 11.91 & 0.81\\
 \hline
-Whittle & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+Whittle & -0.001 & 0.09 & 0.08 & 27.09 & 173.63 & 0.81 \\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
 \label{tab:cuartiles}
 \end{table}
+
+```{r}
+#| include: false
+
+# Predicciones
+predicted_values <- c(fitted.durbinlevinson + mean(Xt))
+
+# Calcular ME (Error Medio)
+ME <- mean(Xt - predicted_values)
+
+# Calcular RMSE (Error Cuadrático Medio)
+RMSE <- sqrt(mean((Xt - predicted_values)^2))
+
+# Calcular MAE (Error Absoluto Medio)
+MAE <- mean(abs(Xt - predicted_values))
+
+# Calcular MPE (Error Porcentual Medio)
+MPE <- mean((Xt - predicted_values) / Xt) * 100
+
+# Calcular MAPE (Error Porcentual Absoluto Medio)
+MAPE <- mean(abs((Xt - predicted_values) / Xt)) * 100
+
+# Calcular MASE (Error Absoluto Medio Escalado)
+# Aquí necesitarías tener las observaciones pasadas para calcular la MASE
+# Si tienes las observaciones pasadas (Yt-1), puedes calcular MASE con:
+MASE <- MAE / mean(abs(Xt[-1] - (lag(as.numeric(Xt))[-1]) ))
+
+```
 
