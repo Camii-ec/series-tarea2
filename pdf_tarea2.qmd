@@ -299,3 +299,151 @@ Tras visualizar el gráfico de Box Ljung de *INSERTAR NUMERO DEL GRÁFICO* se ob
   \end{tabular}
   \label{tab:resultados}
 \end{table}
+
+
+# Predicciones
+
+### a) Predicciones a un paso por el algoritmo Durbin-Levinson
+
+Tras haber ajustado un modelo ARMA(1, 1) se generaron predicciones del modelo.
+
+```{r}
+source("Durbin_Levinson.R")
+
+## Durbin Levinson
+fitted.durbinlevinson <- DurbinLevinson(Xt-mean(Xt), 
+                                        ma = fit$coef[2],
+                                        ar = fit$coef[1])$fitted
+
+predicciones <- data.frame(anos = c(1889, 1890),
+                           prediccion = c(0.61,
+                                          forecast::forecast(fitted.durbinlevinson, h = 1)$mean + mean(Xt)),
+                           inf_ci = c(0.61, 0.60678),
+                           sup_ci = c(0.61, 0.7152417))
+
+serie <- data.frame(ancho = datos$ancho, anos = t)
+```
+
+```{r, fig.width = 10, fig.height = 4}
+#| label: fig-exp7
+#| fig-cap: "Predicción a un paso por Durbin-Levinson"
+#| fig-asp: 0.5
+
+ggplot() +
+  geom_line(data = serie[-c(1:165), ], aes(x = anos, y = ancho), color = "brown4") +
+  geom_ribbon(data = predicciones, aes(x = anos, ymin = inf_ci, ymax = sup_ci),
+              fill = "darkgreen", alpha = 0.51) +
+  geom_segment(aes(x = 1889, xend = 1890, y = 0.61, yend = 0.6610108),
+               color = "blue") +
+  labs(x = "Años",
+       y = "Ancho anillos") +
+  theme_bw()
+
+```
+
+\begin{table}[H]
+  \centering
+  \caption{Predicción a un paso Durbin-Levinson}
+  \begin{tabular}{lcc}
+    \toprule
+    Estimación Puntual & IC superior & IC inferior \\
+    \midrule
+    0.6610108 & 0.7152417 & 0.60678 \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:resultados}
+\end{table}
+
+### ACF empírico vs teórico
+
+Calculando el ACF de un ARMA(1, 1) y generando bandas de confianza utilizando el método Bartlett se generó el INSERTAR NUMERO DEL GRÁFICO. El análisis del ACF revela notables similitudes entre las autocorrelaciones empíricas y el patrón característico de un modelo ARMA (1,1) expuesto en INSERTAR NUMERO DE LA FIGURA.
+
+```{r}
+#### Bandas de confianza:
+# rho \in (rho(h) +- z*sqrt(w/n))
+Bartlett = function(ma = NULL, ar = NULL, m = 3000, lag.max = 10){
+  rho = ARMAacf(ma = ma, ar = ar, lag.max = lag.max+m)
+  j = 1:m
+  w = c()
+  for(h in 1:lag.max){
+    w[h] = sum((rho[abs(h+j)+1]+rho[abs(h-j)+1]-2*rho[h+1]*rho[j+1])^2)
+  }
+  w
+}
+n <- length(Xt)
+w <- Bartlett(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22)
+
+# Banda de confianza para el acf empirico
+rhoh <- acf(Xt, lag.max = 22, plot = FALSE)$acf[2:23]
+
+IC_inf <- rhoh - qnorm(1 - 0.05/2)*sqrt(w/n)
+IC_sup <- rhoh + qnorm(1 - 0.05/2)*sqrt(w/n)
+
+acf_teo <- ARMAacf(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22)
+IC <- data.frame(IC_inf = IC_inf, IC_sup = IC_sup)
+
+aux <- acf(Xt, plot = FALSE)
+```
+
+```{r, fig.width = 10, fig.height = 4}
+#| label: fig-exp8
+#| fig-cap: "ACF empírico vs teórico"
+#| fig-asp: 0.5
+
+data.frame(ACF = acf_teo, Lag = 0:(length(acf_teo) - 1)) %>%
+  ggplot(aes(x = Lag,
+             y = ACF)) +
+  geom_hline(yintercept = 0, col = "gray33") +
+  geom_point(aes(color = "ACF teórico"),
+             size = 2,
+             shape = 17) +
+  geom_segment(data = data.frame(ACF = aux$acf, Lag = aux$lag),
+               aes(x = Lag, xend = Lag,
+                   y = ACF, yend = 0, color = "ACF empírico")) +
+  geom_hline(yintercept = 1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_hline(yintercept = -1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_line(data = IC, aes(x = 1:22,
+                           y = IC_inf),
+            col = "blue") +
+  geom_line(data = IC, aes(x = 1:22,
+                           y = IC_sup),
+            col = "blue") +
+  scale_color_manual(values = c("ACF teórico" = "darkgreen",
+                                "ACF empírico" = "brown4")) +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  labs(y = "ACF", 
+       x = "Lag") +
+  theme_bw()
+```
+
+### Periodograma vs Densidad espectral
+
+Durante la evaluación de nuestro modelo ARMA(1,1) en las series temporales, hemos observado una notable afinidad entre las características espectrales previstas por el modelo y la estructura evidente en el Periodograma como se muestra en INSERTAR NUMERO DEL GRÁFICO. Los picos de frecuencia destacados en la Densidad Espectral del modelo revelan una similitud con las elevaciones observadas en el Periodograma, indicando una alineación espectral acorde entre las predicciones del ARMA(1,1) y las características temporales de los datos *(acortable a indicando un parecido entre las predicciones del ARMA(1,1) y los datos temporales)*.
+
+Esta relación robusta respalda el uso del modelo ARMA(1,1) para capturar eficazmente las componentes temporales en nuestras series temporales. La convergencia entre la Densidad Espectral y el Periodograma demuestra la capacidad del modelo para reflejar fielmente la variabilidad en los datos, proporcionando una valiosa herramienta para el análisis y la interpretación de la dinámica temporal.
+
+```{r}
+spec <- LSTS::spectral.density(ar = fit$coef[1], ma = fit$coef[2],
+                               sd = sqrt(fit$sigma2))
+per <- LSTS::periodogram(Xt)
+```
+
+```{r, fig.width = 10, fig.height = 4}
+#| label: fig-exp9
+#| fig-cap: "Densidad espectral vs Periodograma"
+#| fig-asp: 0.5
+
+data.frame(a = spec) %>%
+  ggplot(aes(x = 1:315, y = a)) +
+  geom_line() +
+  labs(x = "", y = "Densidad espectral") +
+  theme_bw()
+
+data.frame(a = per$periodogram) %>%
+  ggplot(aes(x = 1:84, y = a)) +
+  geom_line() +
+  labs(x = "", y = "Periodograma") +
+  theme_bw()
+```
