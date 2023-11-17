@@ -1,0 +1,388 @@
+---
+title: "Tarea 2"
+subtitle: "EYP3907 - Series de Tiempo"
+format: 
+  pdf: 
+    include-in-header: 
+      text: |
+        \usepackage{amsmath}
+    colorlinks: true
+    geometry:
+      - top=20mm
+      - left=20mm
+      - right=20mm
+      - heightrounded
+    fig-pos: H
+    classoption: twocolumn
+author: 
+  - name: "Sebastián Celaya"
+  - name: "Camila Echeverría"
+  - name: "Francisca Vilca"
+crossref:
+  fig-title: Figura
+  fig-prefix: figura
+  tbl-title: Tabla
+  tbl-prefix: tabla
+tbl-cap-location: bottom
+execute: 
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+library(lmtest)
+library(splines)
+library(forecast)
+library(tidyverse)
+library(dplyr)
+library(tseries)
+library(patchwork)
+
+source("TS.diag.R")
+source("summary.arima.R")
+source("salida.arima.R")
+```
+
+```{r}
+datos <- read.table("norw001x-rwl-noaa.txt", header = TRUE)
+
+datos <- datos %>%
+  filter(!is.na(X540011_raw)) 
+
+datos <- datos %>%
+  filter(age_CE < 1890) %>% 
+  select(age_CE,X540021_raw) %>% 
+  rename("tiempo" = age_CE, "ancho" = X540021_raw)
+
+Xt <- ts(datos$ancho, start = 1721, frequency = 1)
+t <- as.numeric(time(Xt, start = 1721))
+```
+
+## Introducción
+
+Utilizando una base de datos que contiene información sobre el ancho de los anillos de árboles pertenecientes a la especie *Pino Silvestre*, que puede encontrarse en el siguiente [link](https://www.ncei.noaa.gov/pub/data/paleo/treering/measurements/europe/norw001x-rwl-noaa.txt), ajustaremos un modelo ARMA y realizaremos diversos procedimientos para comprobar su ajuste.
+
+## Análisis exploratorio
+
+La fig-exp1 muestra los valores del ancho del anillo registrados entre los años 1721 y 1889. 
+
+```{r}
+#| label: fig-exp1
+#| fig-cap: "Variación del ancho del anillo"
+#| fig-asp: 0.5
+
+datos %>%
+  ggplot(aes(x = tiempo, y = ancho)) +
+  geom_line(color = "brown4", lwd = 0.8)+
+  geom_hline(yintercept = mean(datos$ancho),
+             col = "darkgreen",lwd = 0.8) +
+  labs(x = "Año", y = "Ancho anillo [mm]") +
+  theme_bw()
+
+```
+
+Gracias a la fig-exp2, es posible ver que la mediana de estos datos se encuentra cercana a 0.7 y que no tenemos datos atípicos, aunque la segunda mitad de las observaciones parecieran estar ligeramente más dispersa que la primera.
+
+```{r}
+#| label: fig-exp2
+#| fig-cap: "Boxplot de ancho de anillo"
+#| fig-asp: 0.5
+
+datos %>%
+  ggplot(aes(x = ancho, y = 0)) +
+  # geom_violin(color = "brown3") +
+  geom_boxplot(fill = "brown4",
+               width = 0.3,color = "darkgreen") +
+  ylim(c(-0.5, 0.5)) +
+  theme_bw() +
+  xlab("Ancho anillo [mm]") +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        plot.subtitle = element_text(size = 9,
+                                     #face = "bold",
+                                     color = "black",
+                                     hjust = 0.5),
+        axis.title.x = element_text(size = 8)) 
+
+```
+
+
+```{r}
+#| label: fig-exp3
+#| fig-cap: "Gráfico de Autocorrelación"
+#| fig-asp: 0.5
+
+# ACF base
+acf <- acf(Xt, plot = FALSE)
+acf_data <- data.frame(Lag = acf$lag,
+                       ACF = acf$acf)
+
+# PACF base
+pacf <- pacf(Xt, plot = FALSE)
+pacf_data <- data.frame(Lag = pacf$lag,
+                        PACF = pacf$acf)
+
+n = nrow(datos)
+
+ggplot(acf_data, aes(x = Lag, y = ACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "darkgreen") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "darkgreen") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "brown",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 17,
+             col = "darkgreen") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
+
+
+```
+
+```{r}
+#| label: fig-exp4
+#| fig-cap: "Gráfico de Autocorrelación Parcial"
+#| fig-asp: 0.5
+
+pacf_data %>%
+  ggplot(aes(x = Lag, y = PACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "darkgreen") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "darkgreen") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "brown",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 17,
+             col = "darkgreen") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
+
+
+```
+
+Luego, en los gráficos de la fig-exp3 y la fig-exp4 podemos ver la estructura de correlación de los datos. Si bien no se puede detectar estacionalidad a simple vista, las observaciones sí presentan altos niveles de correlación.
+
+## Ajuste de un modelo ARMA
+
+A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene estructura de un ARMA. Sin embargo, al usar la función `auto.arima()` como guía se recomienda usar un modelo MA(1), pero al hacerle las pruebas a los residuos, este rechaza el test de blancura. Por lo que, nuestra propuesta es un modelo arma(1,1), para que este sea capaz de capturar toda la estructura de la serie temporal.
+
+```{r}
+#| include = F
+
+fit <- forecast::Arima(Xt, order = c(0,0,1), include.mean = T)
+```
+
+
+### a) Significancia estadística de los coeficientes del modelo
+
+Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente significantes, por lo que al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la tabla 1:
+
+```{r}
+#NO SE SI INSERTAR TABLA
+```
+
+
+### b) Estacionaridad e invertibilidad del modelo ARMA 
+
+Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que al ser menor al $5\%$ de significancia se rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la fig-exp5 :
+
+```{r}
+
+#| label: fig-exp5
+#| fig-cap: "Gráfico de raíces unitarias"
+#| fig-asp: 0.5
+dev.off()
+autoplot(fit) +
+  theme_minimal() +
+  labs(x = "", y = "") +
+  theme(
+    text = element_text(size = 10),
+    axis.text.y = element_text(size = 8),
+    axis.title.y = element_text(size = 8),
+    axis.title.x = element_text(size = 8),
+    axis.text.x = element_text(size = 8, angle = 90, vjust = 0.5, hjust=1),
+    legend.position = "none"
+  )
+```
+
+
+### c) Test de blancura - homocedasticidad y normalidad de los residuos
+
+Sabemos que los residuos del modelo, es decir, lo que no es capaz de explicar el modelo ARMA(1,1), debe cumplir con ser normales, tener varianza constante e idealmente provenir de un ruido blanco. Para ello veremos diferentes test que se le pueden aplicar para comprobar ello:
+
+- Usando el estadístico de Ljung-Box es
+
+```{r fig.width = 10, fig.height = 4}
+
+#| label: fig-exp4
+#| fig-cap: "Gráfico de valores-p para el estadístico Ljung-Box"
+#| fig-asp: 0.5
+
+# dev.off()
+# Box.Ljung.Test(fit$residuals, main = "", col = "brown")
+
+ljung_box_test <- Box.test(fit$residuals, lag = 10, type = "Ljung-Box")
+
+lb <- data.frame(Lag = 1:10, Pvalue = ljung_box_test$p.value)
+
+ggplot(lb, aes(x = Lag, y = Pvalue)) +
+  geom_point(shape = 8, size = 2,stat = "identity", col = "brown") +
+  geom_hline(yintercept = 0.05,lwd =0.8, linetype = "dashed", color = "darkgreen") +
+  labs(x = "Lag",
+       y = "valor-p") +
+  theme_minimal()
+```
+
+### d) ¿Es necesario realizar una transformación de Box-Cox?
+
+
+```{r}
+#| include:false
+source("Durbin_Levinson.R")
+
+## Durbin Levinson
+fitted.durbinlevinson <- DurbinLevinson(Xt-mean(Xt), ma = fit$coef[2],
+                                        ar = fit$coef[1])$fitted
+
+# Estimación puntual
+forecast::forecast(fitted.durbinlevinson, h = 1)$mean + mean(Xt)
+
+# Bandas de confianza
+forecast::forecast(fitted.durbinlevinson, h = 1)$lower + mean(Xt)
+forecast::forecast(fitted.durbinlevinson, h = 1)$upper + mean(Xt)
+# Con un 95% de confianza, está entre 0.61 y 0.72
+
+ 
+```
+
+
+## Método de Whittle
+
+```{r}
+#| include: false
+
+whittle.loglik = function(x, serie, p = 1, q = 1){
+  Y = serie
+  n = length(Y)
+  ar  = x[1:p]
+  ma  = x[(p+1):(p+q)]
+  if(p == 0){ar = numeric()}
+  if(q == 0){ma = numeric()}
+  sigma = x[p+q+1]
+  aux = LSTS::periodogram(Y, plot = F)
+  I = aux$periodogram
+  lambda = aux$lambda
+  f = LSTS::spectral.density(ar = ar, ma = ma, sd = sigma, lambda = lambda)
+  aux = 0.5*(sum(log(f)) + sum(I/f))/n
+  aux
+}
+
+whittle <- nlminb(start = c(0.5, 0.5,0.5), objective = whittle.loglik, serie = Xt, p = 1, q = 1)$par
+
+fit_whittle <-  forecast::Arima(Xt-mean(Xt), order = c(1,0,1), fixed = whittle[1:2], include.mean = F)
+
+fitted_whittle.auto.arima <- fit_whittle$fitted
+
+sum_w <- summary(fit_whittle)
+
+# De la cosa de la cami a ti vilkis
+whittle_p <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$mean + mean(Xt)
+whittle_ci <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$lower + mean(Xt)
+whittle_cs <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$upper + mean(Xt)
+```
+
+Ahora si se ajustan los datos con el método de Whittle, también con un modelo ARMA(1,1), obtenemos coeficientes significativos. Además, si usamos la función `forecast()` obtenemos que la predicción de la dimensión del anillo para el siguiente año es de `r round(whittle_p[1],3)` y construyendo un intervalo de confianza al $95\%$ es de [`r round(whittle_ci[2],3)`,`r round(whittle_cs[2],3)`]. Los cuales al compararlos con los obtenidos con el método de Durvin-Levinson vemos que las diferencias son mínimas.
+
+Una forma sencilla de comparar los ajustes es mediantes un gráfico de líneas para visualizar que tanto logran extraer la información de los datos originales como en la fig 6
+
+```{r}
+#| label: fig-exp6
+#| fig-cap: "Compara"
+#| fig-asp: 0.5
+
+gay.1 = "#FF0018"
+gay.2 = "#FFA52C"
+gay.3 = "#FFFF41"
+gay.4 = "#008018"
+gay.5 = "#0000F9"
+gay.6 = "purple"
+gay = c(gay.1, gay.4, gay.6, gay.5)
+
+ajuste = c(Xt, fit$fitted, fitted.durbinlevinson + mean(Xt), fitted_whittle.auto.arima + mean(Xt))
+tipo = c(rep("original", length(Xt)), rep("arma", length(Xt)), rep("durvin-levinson", length(Xt)), rep("whittle", length(Xt)))
+comparar <- data.frame(ajuste, tipo, fecha = c(1721:1889))
+
+comparar %>% 
+  ggplot(aes(fecha, ajuste, color = tipo)) +
+  geom_line(size = 0.8, alpha = 0.5) +
+  scale_color_manual(values = gay) + 
+  labs(x = "Fecha",
+       y = "Valor") +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  guides(linetype = guide_legend(override.aes = list(color = "black")))
+```
+
+De la fig exp6, vemos claramente que el ajuste mediante el algortimo de Durvin-Levinson y por el de Whittle, son bastantes similares, por lo mismo sus predicciones tambien lo son. Por otro lado, vemos como el modelo arma no logra capturar por completo la variabilidad de los datos como si lo hacen los otros métodos.
+
+## Comparación de ajustes
+
+Finalmente, una forma bastante sencilla de comparar los modelos es mediante medidas para evaluar el error las cuales se presentan en la tabla n+1 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| c | c | c | c | c | c | c | c |}
+\hline
+ & ME & RMSE & MAE & MPE & MAPE & MASE \\
+\hline
+ARMA(1,1) & 0.15 & 0.12 & 16.35\\
+\hline
+Durvin- \n Levinson & 0.23 & 0.14 & 17.00 \\
+\hline
+Whittle & 0.23 & 0.14 & 17.00 \\
+\bottomrule
+\end{tabular}
+\caption{Medidas de calidad de ajuste}
+\label{tab:cuartiles}
+\end{table}
+
