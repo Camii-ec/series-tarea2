@@ -84,7 +84,7 @@ datos %>%
 
 Gracias a la @fig-exp2, es posible ver que la mediana de estos datos se encuentra cercana a 0.7 y que no tenemos datos atípicos, aunque la segunda mitad de las observaciones parecieran estar ligeramente más dispersa que la primera.
 
-Luego, en los gráficos de la @fig-exp3 y la @fig-exp4 podemos ver la estructura de correlación de los datos. Si bien no se puede detectar estacionalidad a simple vista, las observaciones sí presentan altos niveles de correlación.
+Luego, en los gráficos de la @fig-exp3 podemos ver la estructura de correlación de los datos. Si bien no se puede detectar estacionalidad a simple vista, las observaciones sí presentan altos niveles de correlación.
 
 ```{r}
 #| label: fig-exp2
@@ -116,9 +116,6 @@ datos %>%
 
 
 ```{r}
-#| label: fig-exp3
-#| fig-cap: "Gráfico de Autocorrelación"
-#| fig-asp: 0.4
 
 # ACF base
 acf <- acf(Xt, plot = FALSE)
@@ -132,7 +129,7 @@ pacf_data <- data.frame(Lag = pacf$lag,
 
 n = nrow(datos)
 
-ggplot(acf_data, aes(x = Lag, y = ACF)) +
+acf_plot <- ggplot(acf_data, aes(x = Lag, y = ACF)) +
   geom_hline(yintercept = 0,
              linetype = "dashed") + 
   geom_hline(yintercept = 1.96/sqrt(n),
@@ -153,23 +150,15 @@ ggplot(acf_data, aes(x = Lag, y = ACF)) +
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
         # axis.ticks.y = element_blank(),
-        axis.title.y = element_text(size = 8),
+        axis.title.y = element_text(size = 12),
         plot.title = element_text(size = 10,
                                   #face = "bold",
                                   color = "black",
                                   hjust = 0.5),
-        axis.title.x = element_text(size = 8),
+        axis.title.x = element_text(size = 12),
         axis.text.x = element_text(size = 8))
 
-
-```
-
-```{r}
-#| label: fig-exp4
-#| fig-cap: "Gráfico de Autocorrelación Parcial"
-#| fig-asp: 0.4
-
-pacf_data %>%
+pacf_plot <- pacf_data %>%
   ggplot(aes(x = Lag, y = PACF)) +
   geom_hline(yintercept = 0,
              linetype = "dashed") + 
@@ -191,15 +180,27 @@ pacf_data %>%
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
         # axis.ticks.y = element_blank(),
-        axis.title.y = element_text(size = 8),
+        axis.title.y = element_text(size = 12),
         plot.title = element_text(size = 10,
                                   #face = "bold",
                                   color = "black",
                                   hjust = 0.5),
-        axis.title.x = element_text(size = 8),
+        axis.title.x = element_text(size = 12),
         axis.text.x = element_text(size = 8))
 
+```
 
+```{r}
+#| label: fig-exp3
+#| fig-cap: "Gráfico de Autocorrelación y Autocorrelación Parcial"
+#| fig-asp: 0.4
+#| fig-width: 10
+#| fig-height: 4
+
+grafico_combinado <- acf_plot + pacf_plot +
+  plot_layout(guides = "collect")
+
+grafico_combinado
 ```
 
 
@@ -210,7 +211,7 @@ A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene e
 ```{r}
 #| include = F
 
-fit <- forecast::Arima(Xt, order = c(1,0,1), include.mean = F)
+fit <- forecast::Arima(Xt, order = c(1,0,1), include.mean = T)
 ```
 
 
@@ -234,10 +235,10 @@ Al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que
 
 ### b) Estacionaridad e invertibilidad del modelo ARMA 
 
-Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la @fig-exp5:
+Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la @fig-exp4:
 
 ```{r}
-#| label: fig-exp5
+#| label: fig-exp4
 #| fig-cap: "Gráfico de raíces unitarias"
 #| fig-asp: 0.5
 autoplot(fit) +
@@ -258,10 +259,10 @@ autoplot(fit) +
 
 Los residuos del modelo deben cumplir estas propiedades. Para ello veremos diferentes test que se le pueden aplicar para comprobar ello:
 
-- La @fig-exp6 nos muestra que los residuos efectivamente corresponden a ruido blanco, es decir, no están correlacionados.
+- La @fig-exp5 nos muestra que los residuos efectivamente corresponden a ruido blanco, es decir, no están correlacionados.
 
 ```{r}
-#| label: fig-exp6
+#| label: fig-exp5
 #| fig-cap: "Gráfico de valores-p para el estadístico Ljung-Box"
 #| fig-asp: 0.4
 
@@ -282,10 +283,10 @@ ggplot(lb, aes(x = Lag, y = Pvalue)) +
   theme_minimal()
 ```
 
-- Luego, al realizar el test de Kolmogorov-Smirnov para evaluar la normalidad, el valor-p obtenido es de 0.27 aproximadamente, por lo que no se rechaza la hipótesis nula: los residuos provienen de una distribución normal. Este ajuste se puede observar en la @fig-exp7
+- Luego, al realizar el test de Kolmogorov-Smirnov para evaluar la normalidad, el valor-p obtenido es de 0.27 aproximadamente, por lo que no se rechaza la hipótesis nula: los residuos provienen de una distribución normal. Este ajuste se puede observar en la @fig-exp6
 
 ```{r}
-#| label: fig-exp7
+#| label: fig-exp6
 #| fig-cap: "Normalidad de los residuos"
 #| fig-asp: 0.6
 #| results: hide
@@ -319,8 +320,6 @@ Tras visualizar el gráfico de Box Ljung de @fig-exp6 se observa que *no* es nec
 
 ### a) Predicciones a un paso por el algoritmo Durbin-Levinson
 
-Tras haber ajustado un modelo ARMA(1, 1) se generaron predicciones del modelo.
-
 ```{r}
 source("Durbin_Levinson.R")
 
@@ -338,39 +337,11 @@ predicciones <- data.frame(anos = c(1889, 1890),
 serie <- data.frame(ancho = datos$ancho, anos = t)
 ```
 
-```{r, fig.width = 10, fig.height = 4}
-#| label: fig-exp8
-#| fig-cap: "Predicción a un paso por Durbin-Levinson"
-#| fig-asp: 0.5
+El algoritmo Durbin-Levinson, empleado para predicciones a un paso en series temporales, ha arrojado una estimación puntual de 0.6610. Este valor representa la proyección para el próximo periodo en la serie temporal. Acompañada por un intervalo de confianza que oscila entre 0.6067 y 0.7152, esta estimación proporciona una medida de la incertidumbre asociada, permitiendo una evaluación más completa de la fiabilidad de la predicción a corto plazo.
 
-ggplot() +
-  geom_line(data = serie[-c(1:165), ], aes(x = anos, y = ancho), color = "brown4") +
-  geom_ribbon(data = predicciones, aes(x = anos, ymin = inf_ci, ymax = sup_ci),
-              fill = "darkgreen", alpha = 0.51) +
-  geom_segment(aes(x = 1889, xend = 1890, y = 0.61, yend = 0.6610108),
-               color = "blue") +
-  labs(x = "Años",
-       y = "Ancho anillos") +
-  theme_bw()
+### b) ACF empírico vs teórico
 
-```
-
-\begin{table}[H]
-  \centering
-  \caption{Predicción a un paso Durbin-Levinson}
-  \begin{tabular}{lcc}
-    \toprule
-    Estimación Puntual & IC superior & IC inferior \\
-    \midrule
-    0.6610108 & 0.7152417 & 0.60678 \\
-    \bottomrule
-  \end{tabular}
-  \label{tab:resultados}
-\end{table}
-
-### ACF empírico vs teórico
-
-Calculando el ACF de un ARMA(1, 1) y generando bandas de confianza utilizando el método Bartlett se generó el INSERTAR NUMERO DEL GRÁFICO. El análisis del ACF revela notables similitudes entre las autocorrelaciones empíricas y el patrón característico de un modelo ARMA (1,1) expuesto en INSERTAR NUMERO DE LA FIGURA.
+Calculando el ACF de un ARMA(1, 1) y generando bandas de confianza utilizando el método Bartlett se generó la @fig-exp7. El análisis del ACF revela notables similitudes entre las autocorrelaciones empíricas y el patrón característico de un modelo ARMA (1,1) expuesto en @fig-exp7.
 
 ```{r}
 #### Bandas de confianza:
@@ -399,8 +370,8 @@ IC <- data.frame(IC_inf = IC_inf, IC_sup = IC_sup)
 aux <- acf(Xt, plot = FALSE)
 ```
 
-```{r, fig.width = 10, fig.height = 4}
-#| label: fig-exp9
+```{r, fig.width = 10, fig.height = 3}
+#| label: fig-exp7
 #| fig-cap: "ACF empírico vs teórico"
 #| fig-asp: 0.5
 
@@ -419,24 +390,27 @@ data.frame(ACF = acf_teo, Lag = 0:(length(acf_teo) - 1)) %>%
   geom_hline(yintercept = -1.96/sqrt(169),
              col = "red", linetype = "dashed") +
   geom_line(data = IC, aes(x = 1:22,
-                           y = IC_inf),
-            col = "blue") +
+                           y = IC_inf,
+                           col = "Banda de confianza")) +
   geom_line(data = IC, aes(x = 1:22,
-                           y = IC_sup),
-            col = "blue") +
+                           y = IC_sup,
+                           col = "Banda de confianza")) +
   scale_color_manual(values = c("ACF teórico" = "darkgreen",
-                                "ACF empírico" = "brown4")) +
-  theme(legend.position = "bottom", legend.box = "horizontal") +
+                                "ACF empírico" = "brown4",
+                                "Banda de confianza" = "blue")) +
+  theme(legend.position = "bottom", 
+        legend.box = "horizontal",
+        legend.text = element_text(size = 16),
+        axis.title.y = element_text(size = 15),
+        axis.title.x = element_text(size = 15)) +
   labs(y = "ACF", 
        x = "Lag") +
   theme_bw()
 ```
 
-### Periodograma vs Densidad espectral
+### c) Periodograma vs Densidad espectral
 
-Durante la evaluación de nuestro modelo ARMA(1,1) en las series temporales, hemos observado una notable afinidad entre las características espectrales previstas por el modelo y la estructura evidente en el Periodograma como se muestra en INSERTAR NUMERO DEL GRÁFICO. Los picos de frecuencia destacados en la Densidad Espectral del modelo revelan una similitud con las elevaciones observadas en el Periodograma, indicando una alineación espectral acorde entre las predicciones del ARMA(1,1) y las características temporales de los datos *(acortable a indicando un parecido entre las predicciones del ARMA(1,1) y los datos temporales)*.
-
-Esta relación robusta respalda el uso del modelo ARMA(1,1) para capturar eficazmente las componentes temporales en nuestras series temporales. La convergencia entre la Densidad Espectral y el Periodograma demuestra la capacidad del modelo para reflejar fielmente la variabilidad en los datos, proporcionando una valiosa herramienta para el análisis y la interpretación de la dinámica temporal.
+En la evaluación del modelo ARMA(1,1) en series temporales, se destacó una notable correspondencia entre las características espectrales predichas y la estructura observada en el Periodograma. La similitud entre los picos de frecuencia en la Densidad Espectral del modelo y las elevaciones en el Periodograma respalda la capacidad del ARMA(1,1) para capturar eficazmente las componentes temporales. Esta convergencia entre la Densidad Espectral y el Periodograma subraya la precisión del modelo al reflejar la variabilidad en los datos, proporcionando una herramienta valiosa para el análisis de la dinámica temporal.
 
 ```{r}
 spec <- LSTS::spectral.density(ar = fit$coef[1], ma = fit$coef[2],
@@ -447,19 +421,27 @@ per <- LSTS::periodogram(Xt)
 ```{r, fig.width = 10, fig.height = 4}
 #| label: fig-exp10
 #| fig-cap: "Densidad espectral vs Periodograma"
-#| fig-asp: 0.5
+#| fig-asp: 0.4
+#| fig-width: 12
+#| fig-height: 4
 
-data.frame(a = spec) %>%
+spec_plot <- data.frame(a = spec) %>%
   ggplot(aes(x = 1:315, y = a)) +
   geom_line() +
   labs(x = "", y = "Densidad espectral") +
+  theme(axis.title.y = element_text(size = 14)) +
   theme_bw()
 
-data.frame(a = per$periodogram) %>%
+per_plot <- data.frame(a = per$periodogram) %>%
   ggplot(aes(x = 1:84, y = a)) +
   geom_line() +
   labs(x = "", y = "Periodograma") +
   theme_bw()
+
+grafico_combinado2 <- spec_plot + per_plot +
+  plot_layout(guides = "collect")
+
+grafico_combinado2
 ```
 
 
