@@ -205,7 +205,7 @@ pacf_data %>%
 
 ## Ajuste de un modelo ARMA
 
-A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene estructura de un ARMA. Por lo que, ayudándonos de la función `auto.arima()` nuestra propuesta es un modelo arma(1,1), para que este sea capaz de capturar toda la estructura de la serie temporal.
+A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene estructura de un ARMA. Por lo que, ayudándonos de la función `auto.arima()` nuestra propuesta es un modelo arma(1,1), para que este sea capaz de capturar toda la estructura de la serie temporal. El modelo ajustado no considera diferenciación pues, como veremos más adelante, la serie no es estacional.
 
 ```{r}
 #| include = F
@@ -216,8 +216,7 @@ fit <- forecast::Arima(Xt, order = c(1,0,1), include.mean = F)
 
 ### a) Significancia estadística de los coeficientes del modelo
 
-Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente significantes, por lo que al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la Tabla 1:
-
+Al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la Tabla 1:
 \begin{table}[H]
   \centering
   \caption{Resumen de estimaciones}
