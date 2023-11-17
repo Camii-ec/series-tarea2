@@ -198,7 +198,7 @@ pacf_data %>%
 
 ## Ajuste de un modelo ARMA
 
-A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene estructura de un ARMA. Por lo que, ayudándonos de la función `auto.arima()` nuestra propuesta es un modelo arma(1,1), para que este sea capaz de capturar toda la estructura de la serie temporal. El modelo ajustado no considera diferenciación pues, como veremos más adelante, la serie no es estacional.
+A simple vista, de los gráficos de ACF y PACF, apreciamos que nuestro modelo tiene estructura de un ARMA. Por lo que, ayudándonos de la función `auto.arima()`, se nos propone usar un MA(1), pero notamos que este no es capaz de capturar toda la estructura de la serie temporal. Luego, de probar distintos modelos, optamos por ajustar un modelo ARMA(1,1), ya que, este presenta el mejor ajuste como se presentará a continuación. Además, el modelo ajustado no considera diferenciación pues, como veremos más adelante, la serie no es estacional.
 
 ```{r}
 #| include = F
@@ -215,11 +215,11 @@ Al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que
   \caption{Resumen de estimaciones}
   \begin{tabular}{lccc}
     \toprule
-     & Estimation & Stand. E & p-value \\
+     & Estimación & SE & valor-p \\
     \midrule
-    ar1        & 0.8367     & 0.0816         & 0.0000 \\
-    ma1        & -0.5698    & 0.1209         & 0.0000 \\
-    intercept  & 0.7079     & 0.0196         & 0.0000 \\
+    AR        & 0.8367     & 0.0816         & 0.0000 \\
+    MA        & -0.5698    & 0.1209         & 0.0000 \\
+    Intercepto  & 0.7079     & 0.0196         & 0.0000 \\
     \bottomrule
   \end{tabular}
   \label{tab:resultados}
@@ -251,7 +251,7 @@ autoplot(fit) +
 
 Los residuos del modelo deben cumplir estas propiedades. Para ello veremos diferentes test que se le pueden aplicar para comprobar ello:
 
-- La @fig-exp5-1 nos muestra que los residuos efectivamente corresponden a ruido blanco, es decir, no están correlacionados.
+- La @fig-exp5-1, correspondiente a los valores-p del estadístico Ljung-Box nos muestra que los residuos efectivamente corresponden a ruido blanco, es decir, no están correlacionados.
 
 - Luego, al realizar el test de Kolmogorov-Smirnov para evaluar la normalidad, el valor-p obtenido es de 0.27 aproximadamente, por lo que no se rechaza la hipótesis nula: los residuos provienen de una distribución normal. Este ajuste se puede observar en la @fig-exp5-2.
 
@@ -314,11 +314,11 @@ data.frame("res" = fit$residuals) %>%
 ```
 
 
--De la misma manera, se obtiene un valor-p de 0.24 al realizar el test Breusch-Pagan para evaluar homocedasticidad, por lo que podemos concluir a favor de esta.
+- De la misma manera, se obtiene un valor-p de 0.24 al realizar el test Breusch-Pagan para evaluar homocedasticidad, por lo que podemos concluir a favor de esta.
 
 ### d) ¿Es necesario realizar una transformación de Box-Cox?
 
-Tras visualizar el gráfico de Box Ljung de @fig-exp5-1 se observa que *no* es necesario realizar una transformación de Box-Cox. Además si comparamos un modelo con y sin la transformación Box-Cox se puede observar que por AIC y BIC el mejor modelo es el modelo sin la transformación de Box-Cox, como se logra visualizar en Tabla 2
+Tras visualizar el gráfico de Ljung-Box de @fig-exp5-1 se observa que *no* es necesario realizar una transformación de Box-Cox. Además si comparamos un modelo con y sin la transformación Box-Cox se puede observar que por AIC y BIC el mejor modelo es el que no utiliza la transformación de Box-Cox, como se logra visualizar en Tabla 2
 
 \begin{table}[H]
   \centering
@@ -337,7 +337,7 @@ Tras visualizar el gráfico de Box Ljung de @fig-exp5-1 se observa que *no* es n
 
 # Predicciones
 
-### a) Predicciones a un paso por el algoritmo Durbin-Levinson
+### a) Predicciones a un paso por el algoritmo Durbin-Levinson (D-L)
 
 ```{r}
 source("Durbin_Levinson.R")
@@ -517,7 +517,7 @@ whittle_ci <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$lower + mean(
 whittle_cs <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$upper + mean(Xt)
 ```
 
-Ahora si se ajustan los datos con el método de Whittle, también con un modelo ARMA(1,1), obtenemos coeficientes significativos. Además, si usamos la función `forecast()` obtenemos que la predicción de la dimensión del anillo para el siguiente año es de `r round(whittle_p[1],3)` y construyendo un intervalo de confianza al $95\%$ es de [`r round(whittle_ci[2],3)`,`r round(whittle_cs[2],3)`]. Los cuales al compararlos con los obtenidos con el método de Durvin-Levinson vemos que las diferencias son mínimas.
+Ahora si se ajustan los datos con el método de Whittle, también con un modelo ARMA(1,1), obtenemos coeficientes significativos. Además, si usamos la función `forecast()` obtenemos que la predicción de la dimensión del anillo para el siguiente año es de `r round(whittle_p[1],3)` y construyendo un intervalo de confianza al $95\%$ es de [`r round(whittle_ci[2],3)`,`r round(whittle_cs[2],3)`]. Los cuales al compararlos con los obtenidos con el método de Durbin-Levinson vemos que las diferencias son mínimas.
 
 Una forma sencilla de comparar los ajustes es mediantes un gráfico de líneas para visualizar que tanto logran extraer la información de los datos originales como en la @fig-11
 
@@ -534,8 +534,9 @@ gay.5 = "#0000F9"
 gay.6 = "purple"
 gay = c(gay.1, gay.4, gay.6, gay.5)
 
-ajuste = c(Xt, fit$fitted, fitted.durbinlevinson + mean(Xt), fitted_whittle.auto.arima + mean(Xt))
-tipo = c(rep("original", length(Xt)), rep("arma", length(Xt)), rep("durvin-levinson", length(Xt)), rep("whittle", length(Xt)))
+ajuste = c(Xt, fit$fitted, fitted.durbinlevinson + mean(Xt), fitted_whittle.auto.arima + mean(Xt)
+           )
+tipo = c(rep("Serie", length(Xt)), rep("ARMA", length(Xt)), rep("Durbin-Levinson", length(Xt)), rep("Whittle", length(Xt)))
 comparar <- data.frame(ajuste, tipo, fecha = c(1721:1889))
 
 comparar %>% 
@@ -549,25 +550,29 @@ comparar %>%
   guides(linetype = guide_legend(override.aes = list(color = "black")))
 ```
 
-De la fig exp6, vemos claramente que el ajuste mediante el algortimo de Durvin-Levinson y por el de Whittle, son bastantes similares, por lo mismo sus predicciones tambien lo son. Por otro lado, vemos como el modelo arma no logra capturar por completo la variabilidad de los datos como si lo hacen los otros métodos.
+De la @fig-11, vemos claramente que el ajuste mediante el algortimo de Durbin-Levinson, el de Whittle y el del modelo ARMA son bastantes similares, por lo mismo sus predicciones tambien lo son.
 
 ## Comparación de ajustes
 
-Finalmente, una forma bastante sencilla de comparar los modelos es mediante medidas para evaluar el error las cuales se presentan en la tabla n+1 
+Finalmente, una forma bastante sencilla de comparar los modelos es mediante medidas para evaluar el error las cuales se presentan en la Tabla 3:
 
 \begin{table}[H]
 \centering
 \begin{tabular}{| c | c | c | c | c | c | c | c |}
 \hline
- & ME & RMSE & MAE & MPE & MAPE & MASE \\
+     & ME & RMSE & MAE & MPE & MAPE & MASE \\
 \hline
-ARMA & 0.15 & 0.12 & 16.35 & MPE & MAPE & MASE\\
+ARMA & -0.001 & 0.09 & 0.08 & -2.14 & 11.90 & 0.81\\
 \hline
-D-L & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+D-L  & -0.0009 & 0.09 & 0.08 & -2.17 & 11.91 & 0.81\\
 \hline
-Whittle & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+Whittle & -0.001 & 0.09 & 0.08 & 27.09 & 173.63 & 0.81 \\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
 \label{tab:cuartiles}
 \end{table}
+
+Analizando las medidas de calidad de ajuste, vemos claramente que el modelo ARMA(1,1) es el que comete menos errores para cada una de las medidas. Sin embargo, el modelo propuesto con el algoritmo de Durbin-Levinson, es bastante similar en los errores que comete, excepto que comete un error mayor en el Error Medio. Lamenteblemente, el modelo proveniente del método Whittle tiene fallas en las medidas que son asociadas al porcentaje, como el MAPE y el MPE. Lo que nos da indicios para no seleccionarlo como modelo de predicción, pues tiene fallas de más del $100\%$, para el caso del MAPE.
+
+En conclusión, creemos que un buen modelo para predecir el ancho del anillo de los [*Pinos Silvestres*](https://upload.wikimedia.org/wikipedia/commons/3/32/Borovice_pod_Kun%C4%9Btickou_Horou.jpg) es un modelo ARMA(1,1), puesto que sus métricas de error son menores y posee una óptima calidad de ajuste.
