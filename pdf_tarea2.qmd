@@ -461,3 +461,94 @@ data.frame(a = per$periodogram) %>%
   labs(x = "", y = "Periodograma") +
   theme_bw()
 ```
+
+
+## Método de Whittle
+
+```{r}
+#| include: false
+
+whittle.loglik = function(x, serie, p = 1, q = 1){
+  Y = serie
+  n = length(Y)
+  ar  = x[1:p]
+  ma  = x[(p+1):(p+q)]
+  if(p == 0){ar = numeric()}
+  if(q == 0){ma = numeric()}
+  sigma = x[p+q+1]
+  aux = LSTS::periodogram(Y, plot = F)
+  I = aux$periodogram
+  lambda = aux$lambda
+  f = LSTS::spectral.density(ar = ar, ma = ma, sd = sigma, lambda = lambda)
+  aux = 0.5*(sum(log(f)) + sum(I/f))/n
+  aux
+}
+
+whittle <- nlminb(start = c(0.5, 0.5,0.5), objective = whittle.loglik, serie = Xt, p = 1, q = 1)$par
+
+fit_whittle <-  forecast::Arima(Xt-mean(Xt), order = c(1,0,1), fixed = whittle[1:2], include.mean = F)
+
+fitted_whittle.auto.arima <- fit_whittle$fitted
+
+sum_w <- summary(fit_whittle)
+
+# De la cosa de la cami a ti vilkis
+whittle_p <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$mean + mean(Xt)
+whittle_ci <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$lower + mean(Xt)
+whittle_cs <- forecast::forecast(fitted_whittle.auto.arima, h = 1)$upper + mean(Xt)
+```
+
+Ahora si se ajustan los datos con el método de Whittle, también con un modelo ARMA(1,1), obtenemos coeficientes significativos. Además, si usamos la función `forecast()` obtenemos que la predicción de la dimensión del anillo para el siguiente año es de `r round(whittle_p[1],3)` y construyendo un intervalo de confianza al $95\%$ es de [`r round(whittle_ci[2],3)`,`r round(whittle_cs[2],3)`]. Los cuales al compararlos con los obtenidos con el método de Durvin-Levinson vemos que las diferencias son mínimas.
+
+Una forma sencilla de comparar los ajustes es mediantes un gráfico de líneas para visualizar que tanto logran extraer la información de los datos originales como en la @fig-11
+
+```{r}
+#| label: fig-11
+#| fig-cap: "Compara"
+#| fig-asp: 0.5
+
+gay.1 = "#FF0018"
+gay.2 = "#FFA52C"
+gay.3 = "#FFFF41"
+gay.4 = "#008018"
+gay.5 = "#0000F9"
+gay.6 = "purple"
+gay = c(gay.1, gay.4, gay.6, gay.5)
+
+ajuste = c(Xt, fit$fitted, fitted.durbinlevinson + mean(Xt), fitted_whittle.auto.arima + mean(Xt))
+tipo = c(rep("original", length(Xt)), rep("arma", length(Xt)), rep("durvin-levinson", length(Xt)), rep("whittle", length(Xt)))
+comparar <- data.frame(ajuste, tipo, fecha = c(1721:1889))
+
+comparar %>% 
+  ggplot(aes(fecha, ajuste, color = tipo)) +
+  geom_line(size = 0.8, alpha = 0.5) +
+  scale_color_manual(values = gay) + 
+  labs(x = "Fecha",
+       y = "Valor") +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  guides(linetype = guide_legend(override.aes = list(color = "black")))
+```
+
+De la fig exp6, vemos claramente que el ajuste mediante el algortimo de Durvin-Levinson y por el de Whittle, son bastantes similares, por lo mismo sus predicciones tambien lo son. Por otro lado, vemos como el modelo arma no logra capturar por completo la variabilidad de los datos como si lo hacen los otros métodos.
+
+## Comparación de ajustes
+
+Finalmente, una forma bastante sencilla de comparar los modelos es mediante medidas para evaluar el error las cuales se presentan en la tabla n+1 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| c | c | c | c | c | c | c | c |}
+\hline
+ & ME & RMSE & MAE & MPE & MAPE & MASE \\
+\hline
+ARMA & 0.15 & 0.12 & 16.35 & MPE & MAPE & MASE\\
+\hline
+D-L & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+\hline
+Whittle & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
+\bottomrule
+\end{tabular}
+\caption{Medidas de calidad de ajuste}
+\label{tab:cuartiles}
+\end{table}

@@ -375,11 +375,11 @@ Finalmente, una forma bastante sencilla de comparar los modelos es mediante medi
 \hline
  & ME & RMSE & MAE & MPE & MAPE & MASE \\
 \hline
-ARMA(1,1) & 0.15 & 0.12 & 16.35\\
+ARMA & 0.15 & 0.12 & 16.35 & MPE & MAPE & MASE\\
 \hline
-Durvin- \n Levinson & 0.23 & 0.14 & 17.00 \\
+D-L & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
 \hline
-Whittle & 0.23 & 0.14 & 17.00 \\
+Whittle & 0.23 & 0.14 & 17.00 & MPE & MAPE & MASE\\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
