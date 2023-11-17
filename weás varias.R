@@ -131,6 +131,7 @@ IC <- data.frame(IC_inf = IC_inf, IC_sup = IC_sup)
 data.frame(ACF = acf_teo, Lag = 0:(length(acf_teo) - 1)) %>%
   ggplot(aes(x = Lag,
              y = ACF)) +
+  geom_hline(yintercept = 0, col = "gray33") +
   geom_point() +
   geom_segment(aes(x = Lag, xend = Lag,
                    y = ACF, yend = 0)) +
@@ -154,6 +155,7 @@ aux <- acf(Xt, plot = FALSE)
 data.frame(ACF = aux$acf, Lag = aux$lag) %>%
   ggplot(aes(x = Lag,
              y = ACF)) +
+  geom_hline(yintercept = 0, col = "gray33") +
   geom_point() +
   geom_hline(yintercept = 1.96/sqrt(169),
              col = "red", linetype = "dashed") +

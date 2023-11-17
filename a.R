@@ -1,5 +1,5 @@
 # Whittle -----------------------------------------------------------------
-
+library(LSTS)
 N <- 169
 S <- 100
 M <- trunc((length(Xt) - N) / S + 1)
@@ -45,6 +45,9 @@ nlminb(
   series = x, order = c(p = 1, q = 1)
   )
 
+
+
+# DESDE ACAAAAAAAAAAAAAA
 whittle.loglik = function(x, serie, p = 1, q = 1){
   Y = serie
   n = length(Y)
@@ -68,3 +71,8 @@ fit_whittle <-  forecast::Arima(Xt-mean(Xt), order = c(1,0,1), fixed = whittle[1
 fitted_whittle.auto.arima <- fit_whittle$fitted
 
 sum_w <- summary(fit_whittle)
+
+# De la cosa de la cami a ti vilkis
+forecast::forecast(fitted_whittle.auto.arima, h = 1)$mean + mean(Xt)
+forecast::forecast(fitted_whittle.auto.arima, h = 1)$lower + mean(Xt)
+forecast::forecast(fitted_whittle.auto.arima, h = 1)$upper + mean(Xt)

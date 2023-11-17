@@ -26,6 +26,31 @@ Box.Ljung.Test = function (z, lag = NULL, main = NULL, col = "black", border = "
     abline(h = 0.05, lty = 2, col = border)
 }
 
+#####################
+## Box.Ljung.Test2 ##
+#####################
+
+Box.Ljung.Test2 = function (z, lag = NULL, main = NULL, col = "black", border = "blue") 
+{
+  if (is.null(lag)) {
+    lag = 10
+  }
+  k = lag
+  n = length(z)
+  aux = acf(z, plot = FALSE, lag.max = k, na.action = na.pass)
+  p.value = vector("numeric")
+  Q = vector("numeric")
+  for (j in 1:k) {
+    rho = aux$acf[2:(j + 1), , 1]
+    Q[j] = sum(n * (n + 2) * rho^2/(n - 1:j))
+    p.value[j] = 1 - pchisq(Q[j], df = j)
+  }
+  if (is.null(main)) {
+    main = expression("p values for Ljung-Box statistic")
+  }
+  return(p.value)
+}
+
 #############
 ## TS.diag ##
 #############

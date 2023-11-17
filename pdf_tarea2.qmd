@@ -268,9 +268,9 @@ Sabemos que los residuos del modelo, es decir, lo que no es capaz de explicar el
 # dev.off()
 # Box.Ljung.Test(fit$residuals, main = "", col = "brown")
 
-ljung_box_test <- Box.test(fit$residuals, lag = 10, type = "Ljung-Box")
+ljung_box_test <- Box.Ljung.Test2(fit$residuals)
 
-lb <- data.frame(Lag = 1:10, Pvalue = ljung_box_test$p.value)
+lb <- data.frame(Lag = 1:10, Pvalue = ljung_box_test)
 
 ggplot(lb, aes(x = Lag, y = Pvalue)) +
   geom_point(shape = 8, size = 2,
