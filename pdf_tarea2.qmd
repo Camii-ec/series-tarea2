@@ -209,7 +209,7 @@ A simple vista, de los gráficos de ACF y PACF, vemos que nuestro modelo tiene e
 ```{r}
 #| include = F
 
-fit <- forecast::Arima(Xt, order = c(0,0,1), include.mean = F)
+fit <- forecast::Arima(Xt, order = c(1,0,1), include.mean = F)
 ```
 
 
