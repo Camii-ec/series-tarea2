@@ -185,7 +185,7 @@ pacf_data %>%
              shape = 17,
              col = "darkgreen") + # Puntos de color en el extremo de las líneas
   labs(x = "Lag",
-       y = "ACF") +
+       y = "PACF") +
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
         # axis.ticks.y = element_blank(),
@@ -215,23 +215,31 @@ fit <- forecast::Arima(Xt, order = c(0,0,1), include.mean = F)
 
 ### a) Significancia estadística de los coeficientes del modelo
 
-Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente significantes, por lo que al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la tabla 1:
+Sabemos que los coeficientes del modelo deben cumplir con ser estadísticamente significantes, por lo que al revisar el valor-p asociado a cada coeficiente del modelo, es claro notar que todos son significativos, tal como se muestra en la Tabla 1:
 
-```{r}
-#NO SE SI INSERTAR TABLA
-```
-
+\begin{table}[H]
+  \centering
+  \caption{Resumen de estimaciones}
+  \begin{tabular}{lccc}
+    \toprule
+     & Estimation & Stand. E & p-value \\
+    \midrule
+    ar1        & 0.8367     & 0.0816         & 0.0000 \\
+    ma1        & -0.5698    & 0.1209         & 0.0000 \\
+    intercept  & 0.7079     & 0.0196         & 0.0000 \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:resultados}
+\end{table}
 
 ### b) Estacionaridad e invertibilidad del modelo ARMA 
 
 Una forma sencilla de comprobar la estacionalidad en los datos es con el test de Dickey-Fuller, el cual nos da un valor-p de 0.01 que al ser menor al $5\%$ de significancia se rechaza la hipótesis nula de que los datos son estacionales. Por otro lado, una forma sencilla de verificar invertibilidad del modelo ARMA(1,1), es de forma gráfica, comprobando que los coeficientes se encuentren al interior de la circunferencia unitaria, lo que puede ser apreciado en la @fig-exp5 :
 
 ```{r}
-
 #| label: fig-exp5
 #| fig-cap: "Gráfico de raíces unitarias"
 #| fig-asp: 0.5
-dev.off()
 autoplot(fit) +
   theme_minimal() +
   labs(x = "", y = "") +
@@ -253,8 +261,7 @@ Sabemos que los residuos del modelo, es decir, lo que no es capaz de explicar el
 - Usando el estadístico de Ljung-Box es
 
 ```{r fig.width = 10, fig.height = 4}
-
-#| label: fig-exp4
+#| label: fig-exp6
 #| fig-cap: "Gráfico de valores-p para el estadístico Ljung-Box"
 #| fig-asp: 0.5
 
@@ -266,11 +273,29 @@ ljung_box_test <- Box.test(fit$residuals, lag = 10, type = "Ljung-Box")
 lb <- data.frame(Lag = 1:10, Pvalue = ljung_box_test$p.value)
 
 ggplot(lb, aes(x = Lag, y = Pvalue)) +
-  geom_point(shape = 8, size = 2,stat = "identity", col = "brown") +
-  geom_hline(yintercept = 0.05,lwd =0.8, linetype = "dashed", color = "darkgreen") +
+  geom_point(shape = 8, size = 2,
+             stat = "identity", col = "brown") +
+  geom_hline(yintercept = 0.05,lwd =0.8,
+             linetype = "dashed", color = "darkgreen") +
   labs(x = "Lag",
        y = "valor-p") +
   theme_minimal()
 ```
 
 ### d) ¿Es necesario realizar una transformación de Box-Cox?
+
+Tras visualizar el gráfico de Box Ljung de *INSERTAR NUMERO DEL GRÁFICO* se observa que *no* es necesario realizar una transformación de Box-Cox. Además si comparamos un modelo con y sin la transformación Box-Cox se puede observar que por AIC y BIC el mejor modelo es el modelo sin la transformación de Box-Cox, como se logra visualizar en Tabla 2
+
+\begin{table}[H]
+  \centering
+  \caption{Comparación modelos}
+  \begin{tabular}{lcc}
+    \toprule
+    Modelo & AIC & BIC \\
+    \midrule
+    Sin Box-Cox & -294.0414 & -281.5218 \\
+    Con Box-Cox & -128.8216 & -116.302  \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:resultados}
+\end{table}

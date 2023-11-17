@@ -57,6 +57,8 @@ fit <- forecast::Arima(Xt, c(1,0,1)) #incluye la media, porque ajusta mejor
 
 fit2 <- forecast::Arima(Xt, c(1,0,1), lambda = "auto")
 
+AIC(fit); BIC(fit)
+AIC(fit2); BIC(fit2)
 
 # Tests -------------------------------------------------------------------
 
@@ -101,35 +103,6 @@ forecast::forecast(fitted.durbinlevinson, h = 1)$upper + mean(Xt)
 
 # ACF ---------------------------------------------------------------------
 
-acf_teo <- ARMAacf(ar = fit$coef[1], ma = fit$coef[2], lag.max = 22)
-IC_sup <- acf_teo - 1.96 / sqrt(length(Xt))
-IC_inf <- acf_teo + 1.96 / sqrt(length(Xt))
-IC = data.frame(IC_sup = IC_sup, IC_inf = IC_inf, Lag = 1:length(IC_sup))
-# Gráfico piñufla del acf estimado vs empírico
-
-data.frame(ACF = acf_teo, Lag = 1:length(acf_teo)) %>%
-  ggplot(aes(x = Lag,
-             y = ACF)) +
-  geom_point() +
-  geom_segment(aes(x = Lag, xend = Lag,
-                   y = ACF, yend = 0)) +
-  geom_hline(yintercept = 1.96/sqrt(169),
-             col = "red", linetype = "dashed") +
-  # geom_line(data = IC, aes(x = ))
-  labs(y = "ACF teórico", 
-       x = "Lag")
-
-aux <- acf(Xt, plot = FALSE)
-
-data.frame(ACF = aux$acf, Lag = aux$lag) %>%
-  ggplot(aes(x = Lag,
-             y = ACF)) +
-  geom_point() +
-  geom_segment(aes(x = Lag, xend = Lag,
-                   y = ACF, yend = 0)) +
-  labs(y = "ACF empírico", 
-       x = "Lag")
-
 
 #### Bandas de confianza:
 # rho \in (rho(h) +- z*sqrt(w/n))
@@ -151,25 +124,46 @@ rhoh <- acf(Xt, lag.max = 22)$acf[2:23]
 IC_inf <- rhoh - qnorm(1 - 0.05/2)*sqrt(w/n)
 IC_sup <- rhoh + qnorm(1 - 0.05/2)*sqrt(w/n)
 
-acf(Xt, lag.max = 22)
-lines(ARMAacf(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22) ~ c(0:22), col = "red", type = "b", pch = 20)
-lines(IC_inf ~ c(1:22), col = "blue", type = "l")
-lines(IC_sup ~ c(1:22), col = "blue", type = "l")
+acf_teo <- ARMAacf(ar = coef(fit)[1], ma = coef(fit)[2], lag.max = 22)
+IC <- data.frame(IC_inf = IC_inf, IC_sup = IC_sup)
+
+# ACF teórico
+data.frame(ACF = acf_teo, Lag = 0:(length(acf_teo) - 1)) %>%
+  ggplot(aes(x = Lag,
+             y = ACF)) +
+  geom_point() +
+  geom_segment(aes(x = Lag, xend = Lag,
+                   y = ACF, yend = 0)) +
+  geom_hline(yintercept = 1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_hline(yintercept = -1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_line(data = IC, aes(x = 1:22,
+                           y = IC_inf),
+            col = "blue") +
+  geom_line(data = IC, aes(x = 1:22,
+                           y = IC_sup),
+            col = "blue") +
+  labs(y = "ACF teórico", 
+       x = "Lag") +
+  theme_bw()
 
 
-
-
-
-par(mfrow=c(1,2))
-plot(acf_teo, type = "h")
-abline(a = 1.96/sqrt(169), b = 0)
-# IC superior
-lines(acf(Xt, plot = FALSE)$lag + 1,
-      y = IC_inf, col = "blue", lty = 2)
-lines(acf(Xt, plot = FALSE)$lag + 1,
-      IC_sup, col = "blue", lty = 2)
-acf(Xt)
-# Creo que hay weás raras aquí, cuidao
+# ACF EMPÍRICO
+aux <- acf(Xt, plot = FALSE)
+data.frame(ACF = aux$acf, Lag = aux$lag) %>%
+  ggplot(aes(x = Lag,
+             y = ACF)) +
+  geom_point() +
+  geom_hline(yintercept = 1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_hline(yintercept = -1.96/sqrt(169),
+             col = "red", linetype = "dashed") +
+  geom_segment(aes(x = Lag, xend = Lag,
+                   y = ACF, yend = 0)) +
+  labs(y = "ACF empírico", 
+       x = "Lag") +
+  theme_bw()
 
 ## FALTAN LOS INTERVALOS DE CONFIANZA PARA ACF TEÓRICO   -> No sé si está bueno
 
